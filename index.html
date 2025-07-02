@@ -1,43 +1,54 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8" />
-<title>위치 실시간 지도</title>
-<!-- Mapbox CSS -->
-<link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
-<style>
-  #map { width: 100%; height: 500px; }
-  #coords, #speed, #heading { margin-top: 10px; }
-</style>
+  <meta charset="utf-8">
+  <title>윤기GO 미니맵</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+  <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
+  <style>
+    html, body {
+      margin: 0; padding: 0;
+      background: transparent;
+      overflow: hidden;
+    }
+    #minimap {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 200px;
+      height: 200px;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      z-index: 9999;
+    }
+    #map {
+      width: 100%;
+      height: 100%;
+    }
+  </style>
 </head>
 <body>
+<div id="minimap">
+  <div id="map"></div>
+</div>
 
-<div id="map"></div>
-<div id="status"></div>
-<div id="coords">위도: - / 경도: -</div>
-<div id="speed">속도: -</div>
-<div id="heading">방향: -</div>
-
-<!-- Mapbox JS -->
-<script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
 <script>
-  // Mapbox 액세스 토큰
   mapboxgl.accessToken = 'pk.eyJ1IjoieW9vbmd5OTEiLCJhIjoiY21jMDczMzV1MXg0YTJqbjFiazMzdWI0ciJ9.1553HcxLbM-BN_v6t5d3zg';
 
-  // 지도 초기화
   const map = new mapboxgl.Map({
     container: 'map',
-    style: 'mapbox://styles/mapbox/streets-v12',
-    center: [126.9780, 37.5665], // 서울
+    style: 'mapbox://styles/mapbox/dark-v11',
+    center: [126.9780, 37.5665],
     zoom: 15,
-    pitch: 0,
+    pitch: 45,
     bearing: 0,
     interactive: false
   });
 
-  // 커스텀 마커 생성
   const markerEl = document.createElement('div');
-  markerEl.style.backgroundImage = 'url(marker_small.png)'; // 이미지 경로 수정 필요
+  markerEl.style.backgroundImage = 'url(marker_small.png)';
   markerEl.style.width = '32px';
   markerEl.style.height = '38px';
   markerEl.style.backgroundSize = 'cover';
@@ -47,59 +58,21 @@
     .setLngLat([126.9780, 37.5665])
     .addTo(map);
 
-  // WebSocket 연결
-  const socket = new WebSocket('ws://192.168.219.108:8080'); // 서버 주소로 변경
+  function updateLocation() {
+    if (!navigator.geolocation) return;
 
-  socket.onopen = () => {
-    document.getElementById('status').textContent = 'WebSocket 연결됨';
-    startLocationUpdates(); // 위치 업데이트 시작
-  };
+    navigator.geolocation.getCurrentPosition(position => {
+      const lng = position.coords.longitude;
+      const lat = position.coords.latitude;
+      const coords = [lng, lat];
 
-  socket.onmessage = (event) => {
-    const data = JSON.parse(event.data);
-    const { latitude, longitude, speed, heading } = data;
-    const coords = [longitude, latitude];
-
-    // 지도와 마커 업데이트
-    marker.setLngLat(coords);
-    map.flyTo({ center: coords, speed: 1.2, curve: 1 });
-
-    // 위치 정보 표시 업데이트
-    document.getElementById('coords').textContent = `위도: ${latitude.toFixed(5)} / 경도: ${longitude.toFixed(5)}`;
-    document.getElementById('speed').textContent = `속도: ${speed ? (speed * 3.6).toFixed(1) + ' km/h' : '-'}`;
-    if (heading !== undefined) {
-      document.getElementById('heading').textContent = `방향: ${heading.toFixed(0)}°`;
-    }
-  };
-
-  socket.onerror = (error) => {
-    document.getElementById('status').textContent = 'WebSocket 오류 발생';
-    console.error('WebSocket Error:', error);
-  };
-
-  // 위치 계속 업데이트하는 함수
-  let locationIntervalId = null;
-  function startLocationUpdates() {
-    if (locationIntervalId) return; // 중복 시작 방지
-    locationIntervalId = setInterval(() => {
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition((pos) => {
-          const data = {
-            latitude: pos.coords.latitude,
-            longitude: pos.coords.longitude,
-            speed: pos.coords.speed || 0,
-            heading: pos.coords.heading || 0
-          };
-          // 서버에 위치 전송
-          socket.send(JSON.stringify(data));
-        }, (err) => {
-          console.error('위치 정보 가져오기 실패:', err);
-        });
-      }
-    }, 5000); // 5초마다 위치 전송
+      marker.setLngLat(coords);
+      map.flyTo({ center: coords, speed: 1.2, curve: 1 });
+    });
   }
 
-  // 페이지 로드 시 별도 위치 요청 없음
+  updateLocation();
+  setInterval(updateLocation, 5000);
 </script>
 </body>
 </html>
