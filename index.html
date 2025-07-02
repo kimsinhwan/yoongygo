@@ -1,149 +1,120 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-  <meta charset="UTF-8" />
-  <title>윤기GO 미니맵 - 영문</title>
-  <!-- Mapbox CSS -->
-  <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
-  <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      background: transparent;
-      overflow: hidden;
-    }
-    #minimap {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      width: 200px;
-      height: 200px;
-      border-radius: 16px;
-      overflow: hidden;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-      z-index: 9999;
-      font-family: 'Apple SD Gothic Neo', sans-serif;
-    }
-    #map {
-      width: 100%;
-      height: 100%;
-    }
-    /* 위치 정보 표시 스타일 */
-    #status {
-      position: fixed;
-      top: 10px;
-      left: 10px;
-      background: #fff;
-      padding: 10px;
-      border-radius: 8px;
-      z-index: 9999;
-      font-family: 'Apple SD Gothic Neo', sans-serif;
-    }
-  </style>
-</head>
-<body>
-  <!-- 미니맵 영역 -->
-  <div id="minimap">
-    <div id="map"></div>
-  </div>
+<script>
+  // Mapbox 액세스 토큰 (본인 토큰으로 교체하세요)
+  mapboxgl.accessToken = 'pk.eyJ1IjoieW9vbmd5OTEiLCJhIjoiY21jMDczMzV1MXg0YTJqbjFiazMzdWI0ciJ9.1553HcxLbM-BN_v6t5d3zg';
 
-  <!-- 위치 정보 표시 -->
-  <div id="status">
-    <div id="coords">위도: - / 경도: -</div>
-    <div id="speed">속도: -</div>
-    <div id="heading">방향: -</div>
-  </div>
+  // 지도 초기화
+  const map = new mapboxgl.Map({
+    container: 'map',
+    style: 'mapbox://styles/mapbox/streets-v12',
+    center: [126.9780, 37.5665], // 초기 위치 (서울)
+    zoom: 15,
+    pitch: 0,
+    bearing: 0,
+    interactive: false
+  });
 
-  <!-- Mapbox JS -->
-  <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
-  <script>
-    // Mapbox 액세스 토큰 (본인 토큰으로 교체하세요)
-    mapboxgl.accessToken = 'pk.eyJ1IjoieW9vbmd5OTEiLCJhIjoiY21jMDczMzV1MXg0YTJqbjFiazMzdWI0ciJ9.1553HcxLbM-BN_v6t5d3zg';
+  // 커스텀 마커 생성
+  const markerEl = document.createElement('div');
+  markerEl.style.backgroundImage = 'url(marker_small.png)'; // 이미지 경로 수정 필요
+  markerEl.style.width = '32px';
+  markerEl.style.height = '38px';
+  markerEl.style.backgroundSize = 'cover';
+  markerEl.style.borderRadius = '10px';
 
-    // 지도 초기화
-    const map = new mapboxgl.Map({
-      container: 'map',
-      style: 'mapbox://styles/mapbox/streets-v12',
-      center: [126.9780, 37.5665], // 초기 위치 (서울)
-      zoom: 15,
-      pitch: 0,
-      bearing: 0,
-      interactive: false
-    });
+  const marker = new mapboxgl.Marker({ element: markerEl })
+    .setLngLat([126.9780, 37.5665])
+    .addTo(map);
 
-    // 커스텀 마커 생성
-    const markerEl = document.createElement('div');
-    markerEl.style.backgroundImage = 'url(marker_small.png)'; // 이미지 경로 수정 필요
-    markerEl.style.width = '32px';
-    markerEl.style.height = '38px';
-    markerEl.style.backgroundSize = 'cover';
-    markerEl.style.borderRadius = '10px';
+  // WebSocket 연결
+  const socket = new WebSocket('ws://192.168.219.108:8080'); // 서버 주소로 변경
 
-    const marker = new mapboxgl.Marker({ element: markerEl })
-      .setLngLat([126.9780, 37.5665])
-      .addTo(map);
+  socket.onopen = () => {
+    console.log('WebSocket 연결됨');
 
-    // WebSocket 연결
-    const socket = new WebSocket('ws://192.168.219.108:8080'); // 서버 주소로 변경
-
-    socket.onopen = () => {
-      console.log('WebSocket 연결됨');
-
-      // 위치 정보 주기적으로 보내기
-      setInterval(() => {
-        if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(pos => {
-            const data = {
-              latitude: pos.coords.latitude,
-              longitude: pos.coords.longitude,
-              speed: pos.coords.speed || 0,
-              heading: pos.coords.heading || 0
-            };
-            socket.send(JSON.stringify(data));
-            // 내 위치를 지도와 마커에 반영
-            const coords = [data.longitude, data.latitude];
-            marker.setLngLat(coords);
-            map.flyTo({ center: coords, speed: 1.2, curve: 1 });
-          });
-        }
-      }, 5000);
-    };
-
-    // 서버에서 위치 데이터 수신
-    socket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      const { latitude, longitude, speed, heading } = data;
-      const coords = [longitude, latitude];
-
-      // 지도와 마커 업데이트
-      marker.setLngLat(coords);
-      map.flyTo({ center: coords, speed: 1.2, curve: 1 });
-
-      // 위치 정보 표시 업데이트
-      document.getElementById('coords').textContent = `위도: ${latitude.toFixed(5)} / 경도: ${longitude.toFixed(5)}`;
-      document.getElementById('speed').textContent = `속도: ${speed ? (speed * 3.6).toFixed(1) + ' km/h' : '-'}`;
-      if (heading !== undefined) {
-        document.getElementById('heading').textContent = `방향: ${heading.toFixed(0)}°`;
+    // 위치 정보 주기적으로 보내기
+    setInterval(() => {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(pos => {
+          const data = {
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+            speed: pos.coords.speed || 0,
+            heading: pos.coords.heading || 0
+          };
+          socket.send(JSON.stringify(data));
+          // 내 위치를 지도와 마커에 반영
+          const coords = [data.longitude, data.latitude];
+          marker.setLngLat(coords);
+          map.flyTo({ center: coords, speed: 1.2, curve: 1 });
+        });
       }
-    };
+    }, 5000);
+  };
 
-    // 내 위치 갱신 함수 (선택적)
-    function updateLocation() {
-      if (!navigator.geolocation) return;
-      navigator.geolocation.getCurrentPosition(position => {
-        const lng = position.coords.longitude;
-        const lat = position.coords.latitude;
-        const coords = [lng, lat];
+  // 서버에서 위치 데이터 수신
+  socket.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    const { latitude, longitude, speed, heading } = data;
+    const coords = [longitude, latitude];
 
-        // 내 위치를 지도와 마커에 반영
-        marker.setLngLat(coords);
-        map.flyTo({ center: coords, speed: 1.2, curve: 1 });
-      });
+    // 지도와 마커 업데이트
+    marker.setLngLat(coords);
+    map.flyTo({ center: coords, speed: 1.2, curve: 1 });
+
+    // 위치 정보 표시 업데이트
+    document.getElementById('coords').textContent = `위도: ${latitude.toFixed(5)} / 경도: ${longitude.toFixed(5)}`;
+    document.getElementById('speed').textContent = `속도: ${speed ? (speed * 3.6).toFixed(1) + ' km/h' : '-'}`;
+    if (heading !== undefined) {
+      document.getElementById('heading').textContent = `방향: ${heading.toFixed(0)}°`;
     }
+  };
 
-    // 최초 위치 갱신 및 주기적 갱신
-    updateLocation();
-    setInterval(updateLocation, 5000); // 5초마다 갱신
-  </script>
-</body>
-</html>
+  // 위치 권한 요청 및 최초 위치 갱신
+  function requestLocationPermission() {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          // 위치 권한 허용 시 위치 업데이트
+          const lng = position.coords.longitude;
+          const lat = position.coords.latitude;
+          const coords = [lng, lat];
+
+          // 내 위치를 지도와 마커에 반영
+          marker.setLngLat(coords);
+          map.flyTo({ center: coords, zoom: 15, speed: 1.2, curve: 1 });
+        },
+        (error) => {
+          // 권한 거부 또는 오류 처리
+          alert('위치 권한이 필요합니다. 권한을 허용해주세요.');
+        }
+      );
+    } else {
+      alert('이 브라우저는 위치 정보를 지원하지 않습니다.');
+    }
+  }
+
+  // 페이지 로드 시 위치 권한 요청
+  window.onload = () => {
+    requestLocationPermission();
+
+    // 이후 위치 갱신도 계속 수행
+    setInterval(() => {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(pos => {
+          const data = {
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+            speed: pos.coords.speed || 0,
+            heading: pos.coords.heading || 0
+          };
+          // 서버에 위치 전송
+          socket.send(JSON.stringify(data));
+          // 지도와 마커 업데이트
+          const coords = [data.longitude, data.latitude];
+          marker.setLngLat(coords);
+          map.flyTo({ center: coords, speed: 1.2, curve: 1 });
+        });
+      }
+    }, 5000);
+  };
+</script>
