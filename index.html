@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="utf-8">
+  <meta charset="utf-8" />
   <title>윤기GO 미니맵 - 영문</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
   <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
   <style>
@@ -32,50 +32,84 @@
   </style>
 </head>
 <body>
-<div id="minimap">
-  <div id="map"></div>
-</div>
+  <div id="minimap">
+    <div id="map"></div>
+  </div>
 
-<script>
-  mapboxgl.accessToken = 'pk.eyJ1IjoieW9vbmd5OTEiLCJhIjoiY21jMDczMzV1MXg0YTJqbjFiazMzdWI0ciJ9.1553HcxLbM-BN_v6t5d3zg';
+  <!-- 위치 정보 표시용 -->
+  <div id="status" style="position:fixed; top:10px; left:10px; background:#fff; padding:10px; border-radius:8px; z-index:9999;">
+    <div id="coords">위도: - / 경도: -</div>
+    <div id="speed">속도: -</div>
+    <div id="heading">방향: -</div>
+  </div>
 
-  const map = new mapboxgl.Map({
-    container: 'map',
-    style: 'mapbox://styles/mapbox/streets-v12', // ✅ 영문 기본 스타일
-    center: [126.9780, 37.5665],
-    zoom: 15,
-    pitch: 0,    // 위에서 보는 2D 시점
-    bearing: 0,
-    interactive: false
-  });
+  <script>
+    // Mapbox 초기화
+    mapboxgl.accessToken = 'pk.eyJ1IjoieW9vbmd5OTEiLCJhIjoiY21jMDczMzV1MXg0YTJqbjFiazMzdWI0ciJ9.1553HcxLbM-BN_v6t5d3zg';
 
-  // 커스텀 마커
-  const markerEl = document.createElement('div');
-  markerEl.style.backgroundImage = 'url(marker_small.png)'; // 존재하는 이미지로 바꿔주세요
-  markerEl.style.width = '32px';
-  markerEl.style.height = '38px';
-  markerEl.style.backgroundSize = 'cover';
-  markerEl.style.borderRadius = '10px';
+    const map = new mapboxgl.Map({
+      container: 'map',
+      style: 'mapbox://styles/mapbox/streets-v12',
+      center: [126.9780, 37.5665],
+      zoom: 15,
+      pitch: 0,
+      bearing: 0,
+      interactive: false
+    });
 
-  const marker = new mapboxgl.Marker({ element: markerEl })
-    .setLngLat([126.9780, 37.5665])
-    .addTo(map);
+    // 커스텀 마커
+    const markerEl = document.createElement('div');
+    markerEl.style.backgroundImage = 'url(marker_small.png)'; // 이미지 경로 수정 필요
+    markerEl.style.width = '32px';
+    markerEl.style.height = '38px';
+    markerEl.style.backgroundSize = 'cover';
+    markerEl.style.borderRadius = '10px';
 
-  function updateLocation() {
-    if (!navigator.geolocation) return;
+    const marker = new mapboxgl.Marker({ element: markerEl })
+      .setLngLat([126.9780, 37.5665])
+      .addTo(map);
 
-    navigator.geolocation.getCurrentPosition(position => {
-      const lng = position.coords.longitude;
-      const lat = position.coords.latitude;
-      const coords = [lng, lat];
+    // WebSocket 연결
+   const socket = new WebSocket('ws://192.168.219.108:8080'); // 서버 주소로 변경
 
+    socket.onopen = () => {
+      console.log('WebSocket 연결됨');
+    };
+
+    socket.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      const { latitude, longitude, speed, heading } = data;
+
+      const coords = [longitude, latitude];
+
+      // 지도와 마커 업데이트
       marker.setLngLat(coords);
       map.flyTo({ center: coords, speed: 1.2, curve: 1 });
-    });
-  }
 
-  updateLocation();
-  setInterval(updateLocation, 5000); // 5초마다 내 위치 갱신
-</script>
+      // 상태바 업데이트
+      document.getElementById('coords').textContent = `위도: ${latitude.toFixed(5)} / 경도: ${longitude.toFixed(5)}`;
+      document.getElementById('speed').textContent = `속도: ${speed ? (speed * 3.6).toFixed(1) + ' km/h' : '-'}`;
+      if (heading !== undefined) {
+        document.getElementById('heading').textContent = `방향: ${heading.toFixed(0)}°`;
+      }
+    };
+
+    // 기존 위치 갱신 함수 (선택적, 필요시 유지)
+    function updateLocation() {
+      if (!navigator.geolocation) return;
+      navigator.geolocation.getCurrentPosition(position => {
+        const lng = position.coords.longitude;
+        const lat = position.coords.latitude;
+        const coords = [lng, lat];
+
+        marker.setLngLat(coords);
+        map.flyTo({ center: coords, speed: 1.2, curve: 1 });
+      });
+    }
+
+    // 기존 위치 갱신 호출
+    updateLocation();
+    setInterval(updateLocation, 5000); // 5초마다 내 위치 갱신
+  </script>
 </body>
 </html>
