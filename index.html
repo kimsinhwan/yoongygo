@@ -19,16 +19,15 @@
     box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     z-index: 9999;
   }
-  /* 위치 정보 표시 영역 숨기기 (필요시) */
-  #map { display: none; }
+  /* 기타 스타일 제거 또는 필요시 추가 */
 </style>
 </head>
 <body>
 
-<!-- 미니맵 컨테이너 -->
+<!-- 미니맵 컨테이너만 존재 -->
 <div id="miniMap"></div>
 
-<!-- 위치 정보 표시 영역 (숨김 처리) -->
+<!-- WebSocket 상태 및 위치 정보 표시 (선택사항) -->
 <div id="status"></div>
 <div id="coords">위도: - / 경도: -</div>
 <div id="speed">속도: -</div>
@@ -44,16 +43,16 @@
   const miniMap = new mapboxgl.Map({
     container: 'miniMap',
     style: 'mapbox://styles/mapbox/light-v11', // 밝고 화이트 계열 스타일
-    center: [126.9780, 37.5665], // 서울
+    center: [126.9780, 37.5665], // 초기 중심 좌표 (서울)
     zoom: 14,
     pitch: 0,
     bearing: 0,
     interactive: false // 사용자 조작 불가
   });
 
-  // 내 위치 표시용 마커 생성
+  // 내 위치 표시 마커 생성
   const markerEl = document.createElement('div');
-  markerEl.style.backgroundImage = 'url(marker_small.png)'; // 로고 이미지 경로 수정 필요
+  markerEl.style.backgroundImage = 'url(marker_small.png)'; // 내 위치 로고 이미지 경로
   markerEl.style.width = '32px';
   markerEl.style.height = '38px';
   markerEl.style.backgroundSize = 'cover';
