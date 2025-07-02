@@ -2,13 +2,14 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8">
-  <title>윤기GO 미니맵</title>
+  <title>윤기GO 미니맵 - 영문</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
   <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
   <style>
     html, body {
-      margin: 0; padding: 0;
+      margin: 0;
+      padding: 0;
       background: transparent;
       overflow: hidden;
     }
@@ -40,16 +41,17 @@
 
   const map = new mapboxgl.Map({
     container: 'map',
-    style: 'mapbox://styles/yoongy91/cmclujjwu004l01sq594ea8vn',
+    style: 'mapbox://styles/mapbox/streets-v12', // ✅ 영문 기본 스타일
     center: [126.9780, 37.5665],
     zoom: 15,
-    pitch: 0, // 3D 기울기 제거 (2D 뷰)
+    pitch: 0,    // 위에서 보는 2D 시점
     bearing: 0,
     interactive: false
   });
 
+  // 커스텀 마커
   const markerEl = document.createElement('div');
-  markerEl.style.backgroundImage = 'url(marker_small.png)';
+  markerEl.style.backgroundImage = 'url(marker_small.png)'; // 존재하는 이미지로 바꿔주세요
   markerEl.style.width = '32px';
   markerEl.style.height = '38px';
   markerEl.style.backgroundSize = 'cover';
@@ -73,7 +75,7 @@
   }
 
   updateLocation();
-  setInterval(updateLocation, 5000);
+  setInterval(updateLocation, 5000); // 5초마다 내 위치 갱신
 </script>
 </body>
 </html>
