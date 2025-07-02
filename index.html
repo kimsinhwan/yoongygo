@@ -1,70 +1,47 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html>
 <head>
-<meta charset="UTF-8" />
-<title>위치 실시간 지도</title>
-<!-- Mapbox CSS -->
-<link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
-<style>
-  #map {
-    display: none; /* 메인 지도 제거 */
-  }
-  /* 미니맵 스타일 */
-  #miniMap {
-    position: fixed;
-    bottom: 10px;
-    right: 10px;
-    width: 150px;
-    height: 150px;
-    border: 2px solid #555; /* 색상 변경 (영상 참고) */
-    border-radius: 8px;
-    overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-    z-index: 9999;
-  }
-</style>
+  <meta charset="utf-8" />
+  <title>Live Location</title>
+  <script src="https://api.mapbox.com/mapbox-gl-js/v2.13.0/mapbox-gl.js"></script>
+  <link href="https://api.mapbox.com/mapbox-gl-js/v2.13.0/mapbox-gl.css" rel="stylesheet" />
+  <style>
+    html, body, #map {
+      height: 100%;
+      margin: 0;
+    }
+  </style>
 </head>
 <body>
-
-<!-- 미니맵 컨테이너 -->
-<div id="miniMap"></div>
-
-<!-- Mapbox JS -->
-<script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+<div id="map"></div>
 <script>
-  // Mapbox 액세스 토큰
   mapboxgl.accessToken = 'pk.eyJ1IjoieW9vbmd5OTEiLCJhIjoiY21jMDczMzV1MXg0YTJqbjFiazMzdWI0ciJ9.1553HcxLbM-BN_v6t5d3zg';
 
-  // 미니맵 초기화
-  const miniMap = new mapboxgl.Map({
-    container: 'miniMap',
-    style: 'mapbox://styles/mapbox/light-v11', // 밝고 화이트 계열 스타일
-    center: [126.9780, 37.5665], // 서울
-    zoom: 14,
-    pitch: 0,
-    bearing: 0,
-    interactive: false // 조작 불가
+  const map = new mapboxgl.Map({
+    container: 'map',
+    style: 'mapbox://styles/mapbox/streets-v11',
+    center: [126.978, 37.5665], // 초기 좌표 (서울)
+    zoom: 15
   });
 
-  // 내 위치 표시 마커
-  const markerEl = document.createElement('div');
-  markerEl.style.backgroundImage = 'url(marker_small.png)'; // 이미지 경로 수정 필요
-  markerEl.style.width = '32px';
-  markerEl.style.height = '38px';
-  markerEl.style.backgroundSize = 'cover';
-  markerEl.style.borderRadius = '10px';
+  const marker = new mapboxgl.Marker()
+    .setLngLat([126.978, 37.5665])
+    .addTo(map);
 
-  const marker = new mapboxgl.Marker({ element: markerEl })
-    .setLngLat([126.9780, 37.5665])
-    .addTo(miniMap);
-
-  // 위치 업데이트 함수 (WebSocket 제거 후, 예시로 위치를 고정하거나 필요시 별도 구현)
-  // 여기서는 위치를 고정하거나, 필요시 별도 위치 업데이트 로직을 넣으시면 됩니다.
-  // 예를 들어, 일정 시간마다 위치를 변경하는 코드 등을 넣을 수 있습니다.
-
-  // 예시: 위치를 계속 업데이트하는 대신 고정 위치 유지
-  // 또는, 별도 위치 업데이트 함수 호출 가능
-
+  if (navigator.geolocation) {
+    navigator.geolocation.watchPosition(pos => {
+      const lng = pos.coords.longitude;
+      const lat = pos.coords.latitude;
+      marker.setLngLat([lng, lat]);
+      map.setCenter([lng, lat]);
+    }, err => {
+      alert('위치 권한이 필요합니다.');
+    }, {
+      enableHighAccuracy: true
+    });
+  } else {
+    alert('이 브라우저는 위치 정보를 지원하지 않습니다.');
+  }
 </script>
 </body>
 </html>
