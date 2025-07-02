@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>모바일 위치 전송 테스트</title>
+<style>
+  body { font-family: Arial, sans-serif; padding: 20px; }
+  button { margin: 5px; padding: 10px 20px; font-size: 16px; }
+  #status { margin-top: 20px; font-weight: bold; }
+  .info { margin-top: 10px; }
+</style>
+</head>
+<body>
+<h2>모바일 위치 전송 테스트</h2>
+<button id="startBtn">위치 전송 시작</button>
+<button id="stopBtn" disabled>중지</button>
+
+<div id="status">현재 위치: -</div>
+<div class="info">속도: -</div>
+<div class="info">방향: -</div>
+
+<script>
+let ws = null;
+let watchId = null;
+let sendInterval = null;
+
+// WebSocket 서버 주소를 본인 서버 주소로 변경하세요
+const wsUrl = "ws://192.168.219.108:8080";
+
+const startBtn = document.getElementById('startBtn');
+const stopBtn = document.getElementById('stopBtn');
+const statusDiv = document.getElementById('status');
+const speedDiv = document.querySelector('.info:nth-of-type(1)');
+const directionDiv = document.querySelector('.info:nth-of-type(2)');
+
+startBtn.addEventListener('click', () => {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    alert('이미 연결되어 있습니다.');
+    return;
+  }
+
+  // WebSocket 연결
+  ws = new WebSocket(wsUrl);
+
+  ws.onopen = () => {
+    alert('WebSocket 연결 성공!');
+    startLocationTracking();
+    startBtn.disabled = true;
+    stopBtn.disabled = false;
+  };
+
+  ws.onerror = (error) => {
+    alert('WebSocket 연결 실패:', error);
+  };
+
+  ws.onclose = () => {
+    alert('WebSocket 연결이 종료되었습니다.');
+    stopLocationTracking();
+    startBtn.disabled = false;
+    stopBtn.disabled = true;
+  };
+});
+
+stopBtn.addEventListener('click', () => {
+  if (ws) {
+    ws.close();
+  }
+  stopLocationTracking();
+  startBtn.disabled = false;
+  stopBtn.disabled = true;
+});
+
+function startLocationTracking() {
+  if (navigator.geolocation) {
+    // 위치 업데이트 콜백
+    watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        const { latitude, longitude, speed, heading } = position.coords;
+
+        // 위치 정보 표시
+        statusDiv.textContent = `현재 위치: (${latitude.toFixed(6)}, ${longitude.toFixed(6)})`;
+        speedDiv.textContent = `속도: ${speed !== null ? speed.toFixed(2) + ' m/s' : '-'}`;
+        directionDiv.textContent = `방향: ${heading !== null ? heading.toFixed(2) + '°' : '-'}`;
+
+        // 5초마다 서버로 전송
+        if (!sendInterval) {
+          sendInterval = setInterval(() => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+              const data = {
+                latitude,
+                longitude,
+                speed,
+                heading
+              };
+              ws.send(JSON.stringify(data));
+            }
+          }, 5000);
+        }
+      },
+      (error) => {
+        alert('위치 정보를 가져올 수 없습니다:', error.message);
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 0,
+        timeout: 5000
+      }
+    );
+  } else {
+    alert('이 브라우저는 위치 정보를 지원하지 않습니다.');
+  }
+}
+
+function stopLocationTracking() {
+  if (watchId !== null) {
+    navigator.geolocation.clearWatch(watchId);
+    watchId = null;
+  }
+  if (sendInterval) {
+    clearInterval(sendInterval);
+    sendInterval = null;
+  }
+  statusDiv.textContent = '현재 위치: -';
+  speedDiv.textContent = '속도: -';
+  directionDiv.textContent = '방향: -';
+}
+</script>
+</body>
+</html>
