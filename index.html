@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8">
-  <title>미니맵 위치 추적</title>
+  <title>윤기GO 미니맵</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
   <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
@@ -22,15 +22,29 @@
       overflow: hidden;
       box-shadow: 0 4px 12px rgba(0,0,0,0.3);
       z-index: 9999;
+      font-family: 'Apple SD Gothic Neo', sans-serif;
     }
     #map {
       width: 100%;
       height: 100%;
     }
+    #address {
+      position: absolute;
+      top: 6px;
+      left: 6px;
+      right: 6px;
+      font-size: 11px;
+      background: rgba(255,255,255,0.8);
+      padding: 4px 6px;
+      border-radius: 8px;
+      color: #333;
+      z-index: 2;
+    }
   </style>
 </head>
 <body>
 <div id="minimap">
+  <div id="address">📍 위치 불러오는 중...</div>
   <div id="map"></div>
 </div>
 
@@ -39,29 +53,55 @@
 
   const map = new mapboxgl.Map({
     container: 'map',
-    style: 'mapbox://styles/mapbox/dark-v11', // 밤 스타일 미니맵용
+    style: 'mapbox://styles/mapbox/dark-v11',
     center: [126.9780, 37.5665],
     zoom: 15,
-    interactive: false // 줌, 이동 막기
+    pitch: 45,
+    bearing: 0,
+    interactive: false
   });
 
-  const marker = new mapboxgl.Marker({ color: "#00ffff" })
+  const addressBox = document.getElementById('address');
+  const markerEl = document.createElement('div');
+  markerEl.style.backgroundImage = 'url(1234.JPG)';
+  markerEl.style.width = '40px';
+  markerEl.style.height = '48px';
+  markerEl.style.backgroundSize = 'cover';
+  markerEl.style.borderRadius = '10px';
+
+  const marker = new mapboxgl.Marker({ element: markerEl })
     .setLngLat([126.9780, 37.5665])
     .addTo(map);
 
-  function updateLocation() {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(position => {
-        const lng = position.coords.longitude;
-        const lat = position.coords.latitude;
-        marker.setLngLat([lng, lat]);
-        map.setCenter([lng, lat]);
-      });
+  async function updateLocation() {
+    if (!navigator.geolocation) {
+      addressBox.innerText = "❌ 위치 정보를 지원하지 않는 브라우저입니다.";
+      return;
     }
+
+    navigator.geolocation.getCurrentPosition(async position => {
+      const lng = position.coords.longitude;
+      const lat = position.coords.latitude;
+      const coords = [lng, lat];
+
+      marker.setLngLat(coords);
+      map.flyTo({ center: coords, speed: 1.2, curve: 1 });
+
+      try {
+        const res = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${mapboxgl.accessToken}&language=ko`);
+        const data = await res.json();
+        const place = data.features[0]?.place_name || "주소 정보 없음";
+        addressBox.innerText = `📍 ${place}`;
+      } catch {
+        addressBox.innerText = "❗ 주소 불러오기 실패";
+      }
+    }, err => {
+      addressBox.innerText = "🚫 위치 접근 실패";
+    });
   }
 
   updateLocation();
-  setInterval(updateLocation, 5000); // 5초마다 위치 갱신
+  setInterval(updateLocation, 5000);
 </script>
 </body>
 </html>
