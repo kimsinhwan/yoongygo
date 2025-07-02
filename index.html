@@ -30,9 +30,7 @@
 
   socket.onopen = () => {
     console.log('WebSocket 연결됨');
-
-    // 위치 권한 요청 후 위치 갱신 시작
-    requestLocationPermission();
+    // 위치 권한 요청 및 위치 갱신 부분 제거
   };
 
   socket.onmessage = (event) => {
@@ -52,33 +50,7 @@
     }
   };
 
-  // 위치 권한 요청 및 위치 갱신 함수
-  function requestLocationPermission() {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          // 위치 허용 시 최초 위치 반영
-          const lng = position.coords.longitude;
-          const lat = position.coords.latitude;
-          const coords = [lng, lat];
-
-          // 지도와 마커 위치 업데이트
-          marker.setLngLat(coords);
-          map.flyTo({ center: coords, zoom: 15, speed: 1.2, curve: 1 });
-
-          // 이후 위치 계속 업데이트
-          startLocationUpdates();
-        },
-        (error) => {
-          alert('위치 권한이 필요합니다. 권한을 허용해주세요.');
-        }
-      );
-    } else {
-      alert('이 브라우저는 위치 정보를 지원하지 않습니다.');
-    }
-  }
-
-  // 위치 계속 업데이트하는 함수
+  // 위치 계속 업데이트하는 함수 (이 부분도 필요시 삭제 가능)
   function startLocationUpdates() {
     setInterval(() => {
       if (navigator.geolocation) {
@@ -101,9 +73,8 @@
     }, 5000);
   }
 
-  // 페이지 로드 시 위치 권한 요청
+  // 페이지 로드 시 위치 권한 요청 부분 제거
   window.onload = () => {
-    // 이미 WebSocket 연결 후 위치 권한 요청
-    // 또는 필요시 별도 호출 가능
+    // 별도 위치 요청 코드 없음
   };
 </script>
