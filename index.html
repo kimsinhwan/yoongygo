@@ -19,19 +19,12 @@
     box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     z-index: 9999;
   }
-  /* 기타 스타일 제거 또는 필요시 추가 */
 </style>
 </head>
 <body>
 
-<!-- 미니맵 컨테이너만 존재 -->
+<!-- 미니맵 컨테이너 -->
 <div id="miniMap"></div>
-
-<!-- WebSocket 상태 및 위치 정보 표시 (선택사항) -->
-<div id="status"></div>
-<div id="coords">위도: - / 경도: -</div>
-<div id="speed">속도: -</div>
-<div id="heading">방향: -</div>
 
 <!-- Mapbox JS -->
 <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
@@ -43,7 +36,7 @@
   const miniMap = new mapboxgl.Map({
     container: 'miniMap',
     style: 'mapbox://styles/mapbox/light-v11', // 밝고 화이트 계열 스타일
-    center: [126.9780, 37.5665], // 초기 중심 좌표 (서울)
+    center: [126.9780, 37.5665], // 서울
     zoom: 14,
     pitch: 0,
     bearing: 0,
@@ -59,36 +52,27 @@
   markerEl.style.borderRadius = '10px';
 
   const marker = new mapboxgl.Marker({ element: markerEl })
-    .setLngLat([126.9780, 37.5665])
+    .setLngLat([126.9780, 37.5665]) // 초기 위치
     .addTo(miniMap);
 
   // WebSocket 연결
   const socket = new WebSocket('ws://192.168.219.108:8080'); // 서버 주소 변경 필요
 
   socket.onopen = () => {
-    document.getElementById('status').textContent = 'WebSocket 연결됨';
-    startLocationUpdates(); // 위치 업데이트 시작
+    // 연결 성공 시 별도 동작 필요 없으면 비워둠
   };
 
   socket.onmessage = (event) => {
     const data = JSON.parse(event.data);
-    const { latitude, longitude, speed, heading } = data;
+    const { latitude, longitude } = data;
     const coords = [longitude, latitude];
 
-    // 미니맵과 마커 업데이트
+    // 위치 업데이트
     marker.setLngLat(coords);
     miniMap.flyTo({ center: coords, speed: 1.2, curve: 1 });
-
-    // 위치 정보 표시
-    document.getElementById('coords').textContent = `위도: ${latitude.toFixed(5)} / 경도: ${longitude.toFixed(5)}`;
-    document.getElementById('speed').textContent = `속도: ${speed ? (speed * 3.6).toFixed(1) + ' km/h' : '-'}`;
-    if (heading !== undefined) {
-      document.getElementById('heading').textContent = `방향: ${heading.toFixed(0)}°`;
-    }
   };
 
   socket.onerror = (error) => {
-    document.getElementById('status').textContent = 'WebSocket 오류 발생';
     console.error('WebSocket Error:', error);
   };
 
@@ -113,6 +97,9 @@
       }
     }, 5000); // 5초마다 위치 전송
   }
+
+  // 페이지 로드 시 위치 업데이트 시작
+  startLocationUpdates();
 </script>
 </body>
 </html>
