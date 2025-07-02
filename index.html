@@ -1,59 +1,113 @@
 <!DOCTYPE html>
-<html>
+<html lang="ko">
 <head>
   <meta charset="utf-8">
-  <title>내 위치 표시 - 캐릭터 아이콘 + 2D 카카오 지도</title>
-  <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=5f6456afb9c5708cec081438d0726fd6"></script>
+  <title>윤기GO 미니맵 - 상태바 포함</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+  <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
   <style>
-    html, body, #map {
+    html, body {
       margin: 0;
       padding: 0;
+      background: transparent;
+      overflow: hidden;
+    }
+    #minimap {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 200px;
+      height: auto;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      z-index: 9999;
+      font-family: 'Apple SD Gothic Neo', sans-serif;
+      background-color: white;
+    }
+    #map {
       width: 100%;
-      height: 100vh;
+      height: 200px;
+    }
+    #statusbar {
+      background: rgba(0, 0, 0, 0.6);
+      color: white;
+      font-size: 12px;
+      padding: 6px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    #statusbar span {
+      white-space: nowrap;
     }
   </style>
 </head>
 <body>
+
+<div id="minimap">
   <div id="map"></div>
+  <div id="statusbar">
+    <span id="coords">위도: - / 경도: -</span>
+    <span id="speed">속도: -</span>
+    <span id="heading">방향: -°</span>
+  </div>
+</div>
 
-  <script>
-    const mapContainer = document.getElementById('map');
-    const mapOption = {
-      center: new kakao.maps.LatLng(37.5665, 126.9780), // 기본 위치
-      level: 3, // 확대 정도 (2D 평면 보기)
-    };
+<script>
+  mapboxgl.accessToken = 'pk.eyJ1IjoieW9vbmd5OTEiLCJhIjoiY21jMDczMzV1MXg0YTJqbjFiazMzdWI0ciJ9.1553HcxLbM-BN_v6t5d3zg';
 
-    const map = new kakao.maps.Map(mapContainer, mapOption);
+  const map = new mapboxgl.Map({
+    container: 'map',
+    style: 'mapbox://styles/mapbox/streets-v12',
+    center: [126.9780, 37.5665],
+    zoom: 15,
+    pitch: 0,
+    bearing: 0,
+    interactive: false
+  });
 
-    // 사용자 캐릭터 마커 이미지
-    const imageSrc = '2_250611.png'; // 👉 배경 투명한 캐릭터 이미지 파일 (현재 업로드된 것 사용)
-    const imageSize = new kakao.maps.Size(32, 32); // 아이콘 크기 (조절 가능)
-    const markerImage = new kakao.maps.MarkerImage(imageSrc, imageSize);
+  const markerEl = document.createElement('div');
+  markerEl.style.backgroundImage = 'url(https://kimsinhwan.github.io/yoongygo/2_250611_transparent.png)';
+  markerEl.style.width = '32px';
+  markerEl.style.height = '38px';
+  markerEl.style.backgroundSize = 'cover';
+  markerEl.style.borderRadius = '10px';
 
-    const marker = new kakao.maps.Marker({
-      map: map,
-      image: markerImage,
-      position: map.getCenter()
+  const marker = new mapboxgl.Marker({ element: markerEl })
+    .setLngLat([126.9780, 37.5665])
+    .addTo(map);
+
+  function updateLocation() {
+    if (!navigator.geolocation) return;
+
+    navigator.geolocation.getCurrentPosition(position => {
+      const lat = position.coords.latitude.toFixed(5);
+      const lng = position.coords.longitude.toFixed(5);
+      const spd = position.coords.speed;
+      const speedDisplay = spd ? (spd * 3.6).toFixed(1) + ' km/h' : '-';
+
+      document.getElementById('coords').textContent = `위도: ${lat} / 경도: ${lng}`;
+      document.getElementById('speed').textContent = `속도: ${speedDisplay}`;
+
+      const coords = [parseFloat(lng), parseFloat(lat)];
+      marker.setLngLat(coords);
+      map.flyTo({ center: coords, speed: 1.2, curve: 1 });
     });
+  }
 
-    function updateLocation() {
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(function(position) {
-          const lat = position.coords.latitude;
-          const lon = position.coords.longitude;
-          const pos = new kakao.maps.LatLng(lat, lon);
-          marker.setPosition(pos);
-          map.setCenter(pos);
-        }, function(error) {
-          console.warn('위치 접근 실패:', error);
-        });
-      } else {
-        alert('브라우저가 위치 정보를 지원하지 않습니다.');
-      }
+  updateLocation();
+  setInterval(updateLocation, 5000);
+
+  // 방향 센서 (모바일)
+  window.addEventListener('deviceorientation', function (event) {
+    if (event.alpha !== null) {
+      const heading = 360 - event.alpha;
+      document.getElementById('heading').textContent = `방향: ${heading.toFixed(0)}°`;
     }
+  });
+</script>
 
-    updateLocation();
-    setInterval(updateLocation, 5000); // 5초마다 갱신
-  </script>
 </body>
 </html>
