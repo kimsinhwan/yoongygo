@@ -1,12 +1,12 @@
 <script>
-  // Mapbox 액세스 토큰 (본인 토큰으로 교체하세요)
-  mapboxgl.accessToken = 'sk.eyJ1IjoieW9vbmd5OTEiLCJhIjoiY21jbTloanU0MGlkejJtczNhcGY1MmJrMiJ9.mZ2ACXwuXxjBJs9SqebnIA';
+  // Mapbox 액세스 토큰
+  mapboxgl.accessToken = 'pk.eyJ1IjoieW9vbmd5OTEiLCJhIjoiY21jMDczMzV1MXg0YTJqbjFiazMzdWI0ciJ9.1553HcxLbM-BN_v6t5d3zg';
 
   // 지도 초기화
   const map = new mapboxgl.Map({
     container: 'map',
     style: 'mapbox://styles/mapbox/streets-v12',
-    center: [126.9780, 37.5665], // 초기 위치 (서울)
+    center: [126.9780, 37.5665], // 서울
     zoom: 15,
     pitch: 0,
     bearing: 0,
@@ -31,27 +31,10 @@
   socket.onopen = () => {
     console.log('WebSocket 연결됨');
 
-    // 위치 정보 주기적으로 보내기
-    setInterval(() => {
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(pos => {
-          const data = {
-            latitude: pos.coords.latitude,
-            longitude: pos.coords.longitude,
-            speed: pos.coords.speed || 0,
-            heading: pos.coords.heading || 0
-          };
-          socket.send(JSON.stringify(data));
-          // 내 위치를 지도와 마커에 반영
-          const coords = [data.longitude, data.latitude];
-          marker.setLngLat(coords);
-          map.flyTo({ center: coords, speed: 1.2, curve: 1 });
-        });
-      }
-    }, 5000);
+    // 위치 권한 요청 후 위치 갱신 시작
+    requestLocationPermission();
   };
 
-  // 서버에서 위치 데이터 수신
   socket.onmessage = (event) => {
     const data = JSON.parse(event.data);
     const { latitude, longitude, speed, heading } = data;
@@ -69,22 +52,24 @@
     }
   };
 
-  // 위치 권한 요청 및 최초 위치 갱신
+  // 위치 권한 요청 및 위치 갱신 함수
   function requestLocationPermission() {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          // 위치 권한 허용 시 위치 업데이트
+          // 위치 허용 시 최초 위치 반영
           const lng = position.coords.longitude;
           const lat = position.coords.latitude;
           const coords = [lng, lat];
 
-          // 내 위치를 지도와 마커에 반영
+          // 지도와 마커 위치 업데이트
           marker.setLngLat(coords);
           map.flyTo({ center: coords, zoom: 15, speed: 1.2, curve: 1 });
+
+          // 이후 위치 계속 업데이트
+          startLocationUpdates();
         },
         (error) => {
-          // 권한 거부 또는 오류 처리
           alert('위치 권한이 필요합니다. 권한을 허용해주세요.');
         }
       );
@@ -93,14 +78,11 @@
     }
   }
 
-  // 페이지 로드 시 위치 권한 요청
-  window.onload = () => {
-    requestLocationPermission();
-
-    // 이후 위치 갱신도 계속 수행
+  // 위치 계속 업데이트하는 함수
+  function startLocationUpdates() {
     setInterval(() => {
       if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(pos => {
+        navigator.geolocation.getCurrentPosition((pos) => {
           const data = {
             latitude: pos.coords.latitude,
             longitude: pos.coords.longitude,
@@ -109,12 +91,19 @@
           };
           // 서버에 위치 전송
           socket.send(JSON.stringify(data));
-          // 지도와 마커 업데이트
+
           const coords = [data.longitude, data.latitude];
+          // 지도와 마커 업데이트
           marker.setLngLat(coords);
           map.flyTo({ center: coords, speed: 1.2, curve: 1 });
         });
       }
     }, 5000);
+  }
+
+  // 페이지 로드 시 위치 권한 요청
+  window.onload = () => {
+    // 이미 WebSocket 연결 후 위치 권한 요청
+    // 또는 필요시 별도 호출 가능
   };
 </script>
