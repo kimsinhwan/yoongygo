@@ -28,23 +28,10 @@
       width: 100%;
       height: 100%;
     }
-    #address {
-      position: absolute;
-      top: 6px;
-      left: 6px;
-      right: 6px;
-      font-size: 11px;
-      background: rgba(255,255,255,0.8);
-      padding: 4px 6px;
-      border-radius: 8px;
-      color: #333;
-      z-index: 2;
-    }
   </style>
 </head>
 <body>
 <div id="minimap">
-  
   <div id="map"></div>
 </div>
 
@@ -56,12 +43,11 @@
     style: 'mapbox://styles/mapbox/dark-v11',
     center: [126.9780, 37.5665],
     zoom: 15,
-    pitch: 45,
+    pitch: 0, // 3D 기울기 제거 (2D 뷰)
     bearing: 0,
     interactive: false
   });
 
-  const addressBox = document.getElementById('address');
   const markerEl = document.createElement('div');
   markerEl.style.backgroundImage = 'url(marker_small.png)';
   markerEl.style.width = '32px';
@@ -73,30 +59,16 @@
     .setLngLat([126.9780, 37.5665])
     .addTo(map);
 
-  async function updateLocation() {
-    if (!navigator.geolocation) {
-      addressBox.innerText = "❌ 위치 정보를 지원하지 않는 브라우저입니다.";
-      return;
-    }
+  function updateLocation() {
+    if (!navigator.geolocation) return;
 
-    navigator.geolocation.getCurrentPosition(async position => {
+    navigator.geolocation.getCurrentPosition(position => {
       const lng = position.coords.longitude;
       const lat = position.coords.latitude;
       const coords = [lng, lat];
 
       marker.setLngLat(coords);
       map.flyTo({ center: coords, speed: 1.2, curve: 1 });
-
-      try {
-        const res = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${mapboxgl.accessToken}&language=ko`);
-        const data = await res.json();
-        const place = data.features[0]?.place_name || "주소 정보 없음";
-        addressBox.innerText = `📍 ${place}`;
-      } catch {
-        addressBox.innerText = "❗ 주소 불러오기 실패";
-      }
-    }, err => {
-      addressBox.innerText = "🚫 위치 접근 실패";
     });
   }
 
