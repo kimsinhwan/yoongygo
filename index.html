@@ -28,17 +28,18 @@
     .setLngLat([126.978, 37.5665])
     .addTo(map);
 
-  // 위치 권한 요청 및 위치 업데이트 시작 함수
-  function startLocationTracking() {
+  // 위치 권한 요청 강제 호출
+  function requestLocation() {
     if (navigator.geolocation) {
-      // 위치 권한 요청 (권한 팝업이 뜸)
       navigator.geolocation.getCurrentPosition(
         (pos) => {
-          // 권한 허용되면 위치 감시 시작
-          watchPosition();
+          const lng = pos.coords.longitude;
+          const lat = pos.coords.latitude;
+          marker.setLngLat([lng, lat]);
+          map.setCenter([lng, lat]);
         },
         (err) => {
-          alert('위치 권한이 필요합니다.');
+          alert('위치 권한이 필요합니다. 브라우저 설정에서 위치 권한을 허용해주세요.');
         },
         { enableHighAccuracy: true }
       );
@@ -47,21 +48,26 @@
     }
   }
 
-  function watchPosition() {
-    navigator.geolocation.watchPosition(pos => {
-      const lng = pos.coords.longitude;
-      const lat = pos.coords.latitude;
-      marker.setLngLat([lng, lat]);
-      map.setCenter([lng, lat]);
-    }, err => {
-      alert('위치 정보를 가져오는데 실패했습니다.');
-    }, {
-      enableHighAccuracy: true
-    });
-  }
+  // 페이지 로드 시 위치 권한 요청 강제 실행
+  window.onload = () => {
+    requestLocation();
 
-  // 위치 권한 요청 시작
-  startLocationTracking();
+    // 이후 위치 감�� 시작
+    if (navigator.geolocation) {
+      navigator.geolocation.watchPosition(
+        (pos) => {
+          const lng = pos.coords.longitude;
+          const lat = pos.coords.latitude;
+          marker.setLngLat([lng, lat]);
+          map.setCenter([lng, lat]);
+        },
+        (err) => {
+          console.error('위치 업데이트 실패:', err);
+        },
+        { enableHighAccuracy: true }
+      );
+    }
+  };
 </script>
 </body>
 </html>
