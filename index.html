@@ -28,20 +28,40 @@
     .setLngLat([126.978, 37.5665])
     .addTo(map);
 
-  if (navigator.geolocation) {
+  // 위치 권한 요청 및 위치 업데이트 시작 함수
+  function startLocationTracking() {
+    if (navigator.geolocation) {
+      // 위치 권한 요청 (권한 팝업이 뜸)
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          // 권한 허용되면 위치 감시 시작
+          watchPosition();
+        },
+        (err) => {
+          alert('위치 권한이 필요합니다.');
+        },
+        { enableHighAccuracy: true }
+      );
+    } else {
+      alert('이 브라우저는 위치 정보를 지원하지 않습니다.');
+    }
+  }
+
+  function watchPosition() {
     navigator.geolocation.watchPosition(pos => {
       const lng = pos.coords.longitude;
       const lat = pos.coords.latitude;
       marker.setLngLat([lng, lat]);
       map.setCenter([lng, lat]);
     }, err => {
-      alert('위치 권한이 필요합니다.');
+      alert('위치 정보를 가져오는데 실패했습니다.');
     }, {
       enableHighAccuracy: true
     });
-  } else {
-    alert('이 브라우저는 위치 정보를 지원하지 않습니다.');
   }
+
+  // 위치 권한 요청 시작
+  startLocationTracking();
 </script>
 </body>
 </html>
