@@ -100,7 +100,6 @@
               heading: pos.coords.heading || 0
             };
             socket.send(JSON.stringify(data));
-
             // 내 위치를 지도와 마커에 반영
             const coords = [data.longitude, data.latitude];
             marker.setLngLat(coords);
