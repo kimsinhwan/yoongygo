@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>위치 전송</title>
+</head>
+<body>
+<h2>현재 위치 보내기</h2>
+<button id="sendLocationBtn">위치 전송 시작</button>
+<p id="status">상태: 대기 중</p>
+
+<script>
+  const wsUrl = "ws://[2406:5900:1072:b9e4:d867:47bd:6e98:d1e0]:4455"; // WebSocket 서버 주소
+  let socket = null;
+  let watchId = null;
+
+  const statusEl = document.getElementById("status");
+  const btn = document.getElementById("sendLocationBtn");
+
+  function connectWebSocket() {
+    socket = new WebSocket(wsUrl);
+
+    socket.onopen = () => {
+      statusEl.innerText = "WebSocket 연결됨";
+    };
+
+    socket.onclose = () => {
+      statusEl.innerText = "WebSocket 연결 끊김";
+    };
+
+    socket.onerror = (err) => {
+      statusEl.innerText = "WebSocket 오류 발생";
+      console.error("WebSocket 오류:", err);
+    };
+  }
+
+  function sendPosition(position) {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      const data = {
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+        accuracy: position.coords.accuracy,
+        timestamp: position.timestamp
+      };
+      socket.send(JSON.stringify(data));
+      statusEl.innerText = `위치 전송됨: (${data.latitude.toFixed(5)}, ${data.longitude.toFixed(5)})`;
+    }
+  }
+
+  document.getElementById("sendLocationBtn").addEventListener("click", () => {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      // 위치 업데이트 시작
+      if (navigator.geolocation) {
+        watchId = navigator.geolocation.watchPosition(
+          sendPosition,
+          (err) => {
+            statusEl.innerText = "위치 정보를 가져올 수 없습니다.";
+            console.error("위치 오류:", err);
+          },
+          {
+            enableHighAccuracy: true,
+            maximumAge: 10000,
+            timeout: 5000
+          }
+        );
+        statusEl.innerText = "위치 업데이트 시작됨";
+      } else {
+        alert("이 브라우저는 위치 정보를 지원하지 않습니다.");
+      }
+    } else {
+      alert("WebSocket이 연결되지 않았습니다. 새로고침 후 다시 시도하세요.");
+    }
+  });
+
+  // 페이지 로드 시 WebSocket 연결
+  window.onload = () => {
+    connectWebSocket();
+  };
+
+  // 페이지 종료 시 위치 업데이트 중지
+  window.onbeforeunload = () => {
+    if (watchId !== null) {
+      navigator.geolocation.clearWatch(watchId);
+    }
+    if (socket) {
+      socket.close();
+    }
+  };
+</script>
+</body>
+</html>
