@@ -1,40 +1,91 @@
 <!DOCTYPE html>
-<html>
+<html lang="ko">
 <head>
-    <meta charset="utf-8" />
-    <title>Mapbox 위치 표시</title>
-    <script src='https://api.mapbox.com/mapbox-gl-js/v2.14.1/mapbox-gl.js'></script>
-    <link href='https://api.mapbox.com/mapbox-gl-js/v2.14.1/mapbox-gl.css' rel='stylesheet' />
-    <style>
-        body { margin:0; padding:0; }
-        #map { position:absolute; top:0; bottom:0; width:100%; }
-    </style>
+<meta charset="UTF-8" />
+<title>실시간 위치 추적 및 OBS 연동</title>
+<script src="https://api.mapbox.com/mapbox-gl-js/v2.14.1/mapbox-gl.js"></script>
+<link href="https://api.mapbox.com/mapbox-gl-js/v2.14.1/mapbox-gl.css" rel="stylesheet" />
+<style>
+  body { margin:0; padding:0; }
+  #map { position:absolute; top:0; bottom:0; width:100%; }
+</style>
 </head>
 <body>
-    <div id='map'></div>
-    <script>
-        mapboxgl.accessToken = 'pk.eyJ1IjoieW9vbmd5OTEiLCJhIjoiY21jMDczMzV1MXg0YTJqbjFiazMzdWI0ciJ9.1553HcxLbM-BN_v6t5d3zg';
-        const map = new mapboxgl.Map({
-            container: 'map',
-            style: 'mapbox://styles/mapbox/streets-v11',
-            center: [127.024612, 37.532600], // 초기 위치
-            zoom: 14
+<div id="map"></div>
+<script>
+  // 본인 서버 주소와 WebSocket 주소를 아래에 입력하세요
+  const serverUrl = 'https://your-server.com/update-location'; // 위치 데이터 서버 주소
+  const obsWebSocketUrl = 'ws://[2406:5900:1072:b9e4:d867:47bd:6e98:d1e0]:4455'; // OBS WebSocket 서버 주소
+
+  // Mapbox 토큰
+  mapboxgl.accessToken = 'pk.eyJ1IjoieW9vbmd5OTEiLCJhIjoiY21jMDczMzV1MXg0YTJqbjFiazMzdWI0ciJ9.1553HcxLbM-BN_v6t5d3zg';
+
+  // 지도 생성
+  const map = new mapboxgl.Map({
+    container: 'map',
+    style: 'mapbox://styles/mapbox/streets-v11',
+    center: [127.024612, 37.532600], // 초기 위치
+    zoom: 14
+  });
+
+  // 마커 생성
+  let marker = new mapboxgl.Marker()
+    .setLngLat([127.024612, 37.532600])
+    .addTo(map);
+
+  // WebSocket 연결 (OBS용)
+  const obsSocket = new WebSocket(obsWebSocketUrl);
+
+  obsSocket.onopen = () => {
+    console.log('OBS WebSocket 연결 성공');
+  };
+
+  obsSocket.onerror = (error) => {
+    console.error('OBS WebSocket 오류:', error);
+  };
+
+  // 위치 추적 및 서버 전송
+  if (navigator.geolocation) {
+    navigator.geolocation.watchPosition(function(position) {
+      const latitude = position.coords.latitude;
+      const longitude = position.coords.longitude;
+
+      // 서버에 위치 데이터 POST
+      fetch(serverUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ latitude, longitude })
+      }).then(res => res.json())
+        .then(data => {
+          console.log('서버 응답:', data);
+        }).catch(err => {
+          console.error('서버 요청 실패:', err);
         });
 
-        let marker = new mapboxgl.Marker()
-            .setLngLat([127.024612, 37.532600])
-            .addTo(map);
+      // 지도상의 마커 업데이트
+      const newLngLat = [longitude, latitude];
+      marker.setLngLat(newLngLat);
+      map.flyTo({ center: newLngLat });
 
-        // 서버에서 위치 데이터를 받아오는 부분 (예: WebSocket 또는 AJAX)
-        // 여기서는 예시로 WebSocket 사용
-        const socket = new WebSocket('wss://your-server.com/socket');
-
-        socket.onmessage = function(event) {
-            const data = JSON.parse(event.data);
-            const newLngLat = [data.longitude, data.latitude];
-            marker.setLngLat(newLngLat);
-            map.flyTo({ center: newLngLat });
+      // OBS에 위치 정보 보내기 (선택적)
+      if (obsSocket.readyState === WebSocket.OPEN) {
+        const obsData = {
+          event: 'updateLocation',
+          data: {
+            latitude: latitude,
+            longitude: longitude
+          }
         };
-    </script>
+        obsSocket.send(JSON.stringify(obsData));
+      }
+    }, function(error) {
+      console.error('위치 정보를 가져올 수 없습니다:', error);
+    });
+  } else {
+    alert('이 브라우저는 위치 정보를 지원하지 않습니다.');
+  }
+</script>
 </body>
 </html>
